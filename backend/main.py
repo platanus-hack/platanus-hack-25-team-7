@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import uuid
 import os
 import shutil
-from services.video_service import video_service, JOBS
-from models.schemas import UploadResponse, SplitProgress
+from services.video_service import video_service, JOBS, save_jobs
+from models.schemas import UploadResponse, SplitProgress, AnalysisProgress
 
 app = FastAPI()
 
@@ -34,8 +34,13 @@ async def upload_video(background_tasks: BackgroundTasks, file: UploadFile = Fil
         "total_chunks": 0,
         "completed_chunks": 0,
         "split_pct": 0.0,
-        "chunks": []
+        "chunks": [],
+        "analysis_status": "pending",
+        "analyzed_chunks": 0,
+        "analysis_pct": 0.0,
+        "chunk_analyses": []
     }
+    save_jobs()
     
     background_tasks.add_task(video_service.split_video_background, job_id, file_path, file.filename)
     
@@ -48,6 +53,14 @@ async def get_split_progress(job_id: str):
     
     job = JOBS[job_id]
     return SplitProgress(**job)
+
+@app.get("/analysis/{job_id}", response_model=AnalysisProgress)
+async def get_analysis_progress(job_id: str):
+    if job_id not in JOBS:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    job = JOBS[job_id]
+    return AnalysisProgress(**job)
 
 if __name__ == "__main__":
     import uvicorn

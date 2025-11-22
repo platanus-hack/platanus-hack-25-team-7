@@ -25,7 +25,7 @@ setup:
 run-backend:
 	@echo "Starting backend in background with reload..."
 	@rm -f $(LOG_FILE)
-	@nohup $(UVICORN) backend.main:app --reload --host 0.0.0.0 --port 8000 > $(LOG_FILE) 2>&1 & echo $$! > $(PID_FILE)
+	@nohup $(UVICORN) main:app --reload --host 0.0.0.0 --port 8000 > $(LOG_FILE) 2>&1 & echo $$! > $(PID_FILE)
 	@sleep 2
 	@if [ -f $(PID_FILE) ]; then \
 		echo "Backend started with PID $$(cat $(PID_FILE)). Logs are being written to $(LOG_FILE)"; \
@@ -58,3 +58,16 @@ test-split:
 ngrok:
 	@echo "Starting ngrok..."
 	@ngrok http 8000
+
+export_env:
+	@echo "Exporting vars..."
+	@set -a; . ./.env; set +a; \
+		echo "All variables exported."; \
+		bash
+
+set_credentials:
+	@echo "Setting AWS credentials ..."
+	aws configure set aws_access_key_id $(AWS_ACCESS_KEY_ID)
+	aws configure set aws_secret_access_key $(AWS_SECRETS_ACCESS_KEY)
+	aws configure set region $(AWS_REGION)
+	cat ~/.aws/credentials
