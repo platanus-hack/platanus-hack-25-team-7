@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "platanus"
+version = "0.1.0"
+description = "MMA video analysis project"
+authors = ["dguerrach", "tenken", "lagg"]
+package-mode = false
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+moviepy = "1.0.3"
+google-genai = "^1.26.0"
+jupyter = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
