@@ -24,8 +24,11 @@ a:hover {
 
 body {
   margin: 0;
+  /* let children flow vertically and grow naturally in height */
   display: flex;
-  place-items: center;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
   min-width: 320px;
   min-height: 100vh;
   background-image: url('./assets/background.jpg');
@@ -144,12 +147,14 @@ body {
 
 /* === CONTENEDOR GENERAL === */
 .page-container {
-  height: calc(100vh - 80px);
+  /* allow the container to grow when content is taller than the viewport */
+  min-height: calc(100vh - 80px);
   width: calc(100vw - 80px);
   padding: 40px;
   box-sizing: border-box;
   background-color: rgba(0, 0, 0, 0.5);
   margin: 40px;
+  overflow: visible;
 }
 
 .page-container > .page-container{
@@ -246,4 +251,99 @@ input[type="file"] {
 video.locked {
   pointer-events: none !important;
   user-select: none;
+}
+
+
+/* === CONTENEDOR DEL CHAT === */
+.chat-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 50px;
+}
+
+.chat-card {
+  width: 100%;
+  max-width: 900px;
+  padding: 30px;
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  background: rgba(20, 20, 20, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 25px rgba(255, 0, 255, 0.2);
+}
+
+.chat-title {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 25px;
+}
+
+/* === ÁREA DE MENSAJES === */
+.chat-box {
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* === BURBUJAS === */
+.msg {
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.ai-msg {
+  background: rgba(255, 255, 255, 0.12);
+  border-left: 3px solid #ff00ff;
+}
+
+.user-msg {
+  align-self: flex-end;
+  background: #ff00ff;
+  color: black;
+  border-radius: 12px 12px 0px 12px;
+}
+
+/* === INPUT === */
+.chat-input-row {
+  margin-top: 25px;
+  display: flex;
+  gap: 10px;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 14px;
+  border-radius: 10px;
+  background: #111;
+  border: 1px solid #333;
+  color: #fff;
+  font-size: 15px;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: #ff00ff;
+  box-shadow: 0 0 10px #ff00ff66;
+}
+
+/* === BOTÓN ENVIAR === */
+.chat-send-btn {
+  padding: 14px 20px;
+  background: #ff00ff;
+  color: black;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+}
+
+.chat-send-btn:hover {
+  background: #ff33ff;
 }

@@ -65,7 +65,7 @@ export default function VideoUploader({ onExit }) {
 
     setProcessing(true);
 
-    mediaRecorderRef.current.start(1000); // chunk de 30 segundos
+    mediaRecorderRef.current.start(30000); // chunk de 30 segundos
 
     videoRef.current.onended = async () => {
       mediaRecorderRef.current.stop();

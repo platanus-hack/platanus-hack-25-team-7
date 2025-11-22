@@ -1,20 +1,27 @@
-// src/components/CameraRecorder.jsx
 import { useRef, useState } from "react";
 import useContinuousRecorder from "../hooks/useContinuousRecorder";
-import { uploadChunk, getSummary } from "../utils/api";
+
+import ProcessingLoader from "./ProcessingLoader";
+import ChatVideoInsights from "./ChatVideoInsights";
+
+import { processFinalSummary, processChunk } from "../utils/apiAdapter";
 
 export default function CameraRecorder({ onExit }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
-  const [summary, setSummary] = useState(null);
+
+  const [chunks, setChunks] = useState([]);
+  const [analysis, setAnalysis] = useState(null);
+  const [isFinishing, setIsFinishing] = useState(false);
 
   const { recording, startRecordingInternal, stopRecordingInternal } =
     useContinuousRecorder({
-      onChunk: async (blob) => await uploadChunk(blob),
-      onStopAll: async () => {
-        const result = await getSummary();
-        setSummary(result);
+      onChunk: async (blob) => {
+        setChunks((prev) => [...prev, blob]);
+        console.log("Chunk generado (camara):", blob);
+        await processChunk(blob); // si luego quieres quitarlo, aquí lo reemplazas
       },
+      onStopAll: () => {},
     });
 
   async function startRecording() {
@@ -23,9 +30,10 @@ export default function CameraRecorder({ onExit }) {
       audio: true,
     });
 
+    streamRef.current = stream;
+
     videoRef.current.srcObject = stream;
     videoRef.current.play();
-    streamRef.current = stream;
 
     startRecordingInternal(stream);
   }
@@ -37,33 +45,75 @@ export default function CameraRecorder({ onExit }) {
       streamRef.current.getTracks().forEach((t) => t.stop());
     }
 
-    videoRef.current.srcObject = null; // <--- SE LIMPIA EL VIDEO
+    videoRef.current.srcObject = null;
+
+    // 🔥 mostrar barra de carga mientras se procesa último chunk
+    setIsFinishing(true);
+
+    const result = await processFinalSummary(chunks);
+
+    setAnalysis(result);
+    setIsFinishing(false);
+  }
+
+  // 🔥 mostrar chat cuando análisis termina
+  if (analysis) {
+    return <ChatVideoInsights analysis={analysis} onExit={onExit} />;
+  }
+
+  // 🔥 mostrar barra loader mientras procesa último batch
+  if (isFinishing) {
+    return (
+      <ProcessingLoader text="Procesando análisis final de la cámara…" />
+    );
   }
 
   return (
     <div className="page-container">
-      <h2>Camera Recording</h2>
+      <h2>📹 Grabación con Cámara</h2>
 
       <video
         ref={videoRef}
-        className="w-full rounded border mt-4 pointer-events-none select-none opacity-80"
+        className="locked-video"
         controls={false}
         disablePictureInPicture
-        controlsList="nodownload noplaybackrate nofullscreen noremoteplayback"
         muted
-        />
+        controlsList="nodownload nofullscreen noplaybackrate noremoteplayback"
+        style={{
+          width: "100%",
+          maxWidth: "800px",
+          borderRadius: "12px",
+          marginTop: "20px",
+          pointerEvents: "none",
+          userSelect: "none",
+          opacity: 0.9,
+        }}
+      />
 
-      {!recording && <button onClick={startRecording}>Start</button>}
-      {recording && <button onClick={stopRecording}>Stop</button>}
+      <div style={{ marginTop: "20px" }}>
+        {!recording && (
+          <button className="neon-btn" onClick={startRecording}>
+            🎬 Iniciar Grabación
+          </button>
+        )}
 
-      <button onClick={onExit}>Back</button>
+        {recording && (
+          <button className="neon-btn stop" onClick={stopRecording}>
+            ⛔ Detener
+          </button>
+        )}
+      </div>
 
-      {summary && (
-        <div className="mt-4 p-4 border">
-          <h2>Final Summary</h2>
-          <pre>{JSON.stringify(summary, null, 2)}</pre>
-        </div>
-      )}
+      <button className="neon-btn" onClick={onExit} style={{ marginTop: "30px" }}>
+        Volver
+      </button>
+
+      <style>{`
+        .neon-btn.stop {
+          background: #ff0033;
+          box-shadow: 0 0 10px #ff0033;
+        }
+      `}</style>
     </div>
   );
 }
