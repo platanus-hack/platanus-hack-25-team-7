@@ -237,3 +237,4 @@ dist-ssr
 *.sw?
 
 backend.pid
+env.json

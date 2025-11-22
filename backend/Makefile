@@ -106,3 +106,20 @@ deploy:
 
 fd:
 	sam deploy
+
+watch_docker:
+	watch -n 1 docker ps -a
+
+dr:
+	@echo "Running API in Docker..."
+	@docker build -t pvhack-backend .
+	@docker run -d \
+		--name pvhack-backend \
+		-p 8000:8000 \
+		-v $(PWD)/media:/app/media \
+		-v $(PWD)/.env:/app/.env \
+		--env-file .env \
+		pvhack-backend
+	@echo "Backend running in Docker. Access at http://localhost:8000"
+	@echo "To stop: docker stop pvhack-backend && docker rm pvhack-backend"
+	@echo "To view logs: docker logs -f pvhack-backend"
