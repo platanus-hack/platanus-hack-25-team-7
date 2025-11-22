@@ -34,7 +34,7 @@ class AnalysisProgress(BaseModel):
     analysis_pct: float
     chunk_analyses: List[ChunkAnalysis] = []
 
-# Coach Response
+# Coach Response - To be Used Later
 
 class Disciplina(str, Enum):
     STRIKING = "Striking"
