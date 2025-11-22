@@ -1,5 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
+from enum import Enum
 
 class UploadResponse(BaseModel):
     job_id: str
@@ -13,3 +14,51 @@ class SplitProgress(BaseModel):
     completed_chunks: int
     split_pct: float
     chunks: List[str] = []
+
+# Coach Response
+
+class Disciplina(str, Enum):
+    STRIKING = "Striking"
+    GRAPPLING = "Grappling"
+    SUBMISSION = "Submission"
+    MOVEMENT = "Movement"
+
+class Impacto(str, Enum):
+    MAXIMO = "MÁXIMO"
+    SIGNIFICATIVO = "SIGNIFICATIVO"
+    MODERADO = "MODERADO"
+    BAJO = "BAJO"
+
+class MomentoCritico(BaseModel):
+    """Representa un momento crítico identificado en la pelea"""
+    timestamp: str = Field(..., description="Timestamp en formato MM:SS o rango MM:SS - MM:SS")
+    descripcion: str = Field(..., description="Descripción detallada del momento")
+    disciplina: Disciplina = Field(..., description="Disciplina más relevante")
+    impacto: Impacto = Field(..., description="Nivel de impacto del momento")
+
+class PerfilPeleador(BaseModel):
+    """Perfil de rendimiento de un peleador"""
+    nombre: str = Field(..., description="Nombre del peleador")
+    fortalezas: List[str] = Field(default_factory=list, description="Lista de fortalezas principales")
+    debilidades: List[str] = Field(default_factory=list, description="Lista de debilidades críticas")
+    patrones: List[str] = Field(default_factory=list, description="Patrones de comportamiento identificados")
+
+class ReporteEjecutivo(BaseModel):
+    """Reporte ejecutivo completo del Head Coach"""
+    momentos_criticos: List[MomentoCritico] = Field(
+        default_factory=list,
+        description="Momentos críticos ordenados por importancia"
+    )
+    perfil_peleador_a: Optional[PerfilPeleador] = Field(
+        None,
+        description="Perfil del primer peleador"
+    )
+    perfil_peleador_b: Optional[PerfilPeleador] = Field(
+        None,
+        description="Perfil del segundo peleador"
+    )
+    insights_estrategicos: Optional[List[str]] = Field(
+        default_factory=list,
+        description="Insights estratégicos y recomendaciones"
+    )
+    
