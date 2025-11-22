@@ -1,9 +1,15 @@
 import os
 import time
 import logging
+from typing import Dict
 from google import genai
 from dotenv import load_dotenv
 from datetime import datetime
+from prompts import (
+    generate_general_analyst_prompt,
+    generate_specialist_prompt,
+    generate_head_coach_aggregation_prompt
+)
 
 load_dotenv()
 
@@ -19,93 +25,15 @@ class LLMService:
         else:
             self.client = genai.Client(api_key=self.api_key)
         
-        # Use environment variable for model, default to gemini-2.5-pro
+        # Use environment variable for model, default to gemini-2.5-flash
         self.model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-        self.prompts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prompts")
         
-        self.roles = {
-            "striking": {
-                "name": "Striking Offense/Defense Analyst",
-                "desc": "Análisis enfocado en el intercambio de golpes de pie (Boxeo y Muay Thai).",
-                "emphasis": "**posicionamiento** (footwork, ángulo de ataque) y la **conexión efectiva** de golpes.",
-                "actions": "Jab/Cross Conectado, Patada (al cuerpo, pierna, cabeza), Knockdown, KO/TKO, Esquive Exitoso, Uso de Finta.",
-                "example": """| Tiempo (MM:SS) | Peleador | Acción |
-                            | :---: | :---: | :--- |
-                            | 00:00 | Burns | Cross Conectado |
-                            | 00:01 | Ambos | Intercambio de distancia |
-                            | 00:02 | Chimaev | Jab Conectado |
-                            | 00:03 | Ambos | Posicionamiento |
-                            | 00:04 | Ambos | Reset a centro |
-                            | 00:05 | Burns | Patada a pierna conectada |"""
-            },
-            "grappling": {
-                "name": "Grappling Analyst",
-                "desc": "Análisis enfocado en el clinch, controles contra la jaula, derribos y trabajo de piso.",
-                "emphasis": "**control posicional**, **pases de guardia**, **derribos**, y **defensa de derribo**.",
-                "actions": "Takedown efectivo, Defensa de takedown, Control en clinch, Pase de guardia, Ground and pound.",
-                "example": """| Tiempo (MM:SS) | Peleador | Acción |
-                                | :---: | :---: | :--- |
-                                | 00:00 | Ambos | Clinch sin actividad |
-                                | 00:01 | Chimaev | Takedown conseguido |
-                                | 00:02 | Burns | Intenta defensa de takedown |
-                                | 00:03 | Chimaev | Control en suelo |
-                                | 00:04 | Ambos | Sin actividad relevante |
-                                | 00:05 | Chimaev | Ground and pound |"""
-            },
-            "submission": {
-                "name": "Submission Specialist",
-                "desc": "Análisis enfocado en intentos de sumisión, transiciones y defensa.",
-                "emphasis": "**intentos de sumisión**, **transiciones entre posiciones**, **escapes**.",
-                "actions": "Intento de estrangulación, Intento de palanca, Escape de sumisión, Defensa de sumisión.",
-                "example": """| Tiempo (MM:SS) | Peleador | Acción |
-                                | :---: | :---: | :--- |
-                                | 00:00 | Ambos | Evaluación posicional |
-                                | 00:01 | Chimaev | Intento de estrangulación |
-                                | 00:02 | Burns | Defensa activa de sumisión |
-                                | 00:03 | Burns | Escape |
-                                | 00:04 | Chimaev | Cambio a otra sumisión |
-                                | 00:05 | Ambos | Sin actividad |"""
-            },
-            "analista_tactico": {
-                "name": "Analista Táctico Integral",
-                "desc": "Análisis estratégico de la pelea incluyendo toma de decisiones, estrategia, manejo del tiempo y espacio.",
-                "emphasis": "**táctica general**, **patrones de comportamiento**, **ajustes de estrategia**, **lectura del oponente**.",
-                "actions": "Cambio de guardia, Presión en jaula, Ajuste de distancia, Cambio de ritmo, Estrategia defensiva.",
-                "example": """| Tiempo (MM:SS) | Peleador | Acción |
-                                | :---: | :---: | :--- |
-                                | 00:00 | Ambos | Estudio de rival |
-                                | 00:01 | Burns | Ajusta distancia |
-                                | 00:02 | Chimaev | Presiona en jaula |
-                                | 00:03 | Ambos | Cambio de guardia |
-                                | 00:04 | Ambos | Manejo del ritmo |
-                                | 00:05 | Ambos | Sin actividad táctica relevante |"""
-            }
+        # Default config for all LLM calls
+        self.default_config = {
+            "temperature": 0.0,
+            "topP": 0.95,
+            "seed": 42
         }
-
-    def generate_coach_prompt(self, role="striking"):
-        role_key = role.lower()
-        if role_key == "analista":
-            role_key = "analista_tactico"
-        
-        if role_key not in self.roles:
-            raise ValueError(f"Rol '{role}' no soportado. Opciones: {list(self.roles.keys())}")
-
-        r = self.roles[role_key]
-        
-        with open(os.path.join(self.prompts_dir, "coach_prompt_template.txt"), "r") as f:
-            template = f.read()
-            
-        return template.format(
-            role_name=r['name'],
-            role_desc=r['desc'],
-            role_emphasis=r['emphasis'],
-            role_actions=r['actions'],
-            role_example=r['example']
-        )
-
-    def generate_general_analyst_prompt(self):
-        with open(os.path.join(self.prompts_dir, "general_analyst_prompt.txt"), "r") as f:
-            return f.read()
 
     def upload_file(self, file_path, max_retries=3):
         """Upload file to Gemini with retry logic and timeout"""
@@ -144,7 +72,18 @@ class LLMService:
                     raise e
 
     def analyze_chunk(self, file_path):
-        """Analyze chunk with sequential LLM calls and delay between calls"""
+        """
+        Analyze chunk following the workflow from notebook:
+        1. General Analyst creates ground truth from video
+        2. Specialists analyze the ground truth (text only, no video)
+        3. Head Coach aggregates all specialist analyses
+        
+        Args:
+            file_path: Path to video file
+        
+        Returns:
+            Dict with analysis results
+        """
         if not self.client:
             raise ValueError("GEMINI_API_KEY not set or client initialization failed")
 
@@ -153,34 +92,54 @@ class LLMService:
             
             results = {}
             
-            # General Analyst
+            # Step 1: General Analyst
             logger.info(f"[{datetime.now().isoformat()}] Running General Analyst...")
-            prompt_general = self.generate_general_analyst_prompt()
+            prompt_general = generate_general_analyst_prompt()
             response_general = self.client.models.generate_content(
                 model=self.model, 
                 contents=[myfile, prompt_general],
-                config={"temperature": 0.0, "topP": 0.95, "seed": 42}
+                config=self.default_config
             )
-            results["general_analyst"] = response_general.text
+            general_analysis = response_general.text
+            results["general_analyst"] = general_analysis
             logger.info(f"[{datetime.now().isoformat()}] General Analyst completed")
             
             # Delay between LLM calls to avoid rate limits
             time.sleep(5)
             
-            # Specialist Roles (sequential)
-            for role in ["striking", "grappling", "submission"]:
-                logger.info(f"[{datetime.now().isoformat()}] Running {role} analysis...")
-                prompt = self.generate_coach_prompt(role=role)
-                response = self.client.models.generate_content(
-                    model=self.model,
-                    contents=[myfile, prompt],
-                    config={"temperature": 0.0, "topP": 0.95, "seed": 42}
+            # Step 2: Specialist Roles
+            specialist_roles = ["striking", "grappling", "submission", "movement"]
+            specialist_analyses = {}
+            
+            for role in specialist_roles:
+                logger.info(f"[{datetime.now().isoformat()}] Running {role} specialist analysis...")
+                prompt_specialist = generate_specialist_prompt(
+                    role=role,
+                    general_analysis_text=general_analysis
                 )
-                results[role] = response.text
-                logger.info(f"[{datetime.now().isoformat()}] {role} analysis completed")
+                response_specialist = self.client.models.generate_content(
+                    model=self.model,
+                    contents=[prompt_specialist],
+                    config=self.default_config
+                )
+                specialist_analysis = response_specialist.text
+                specialist_analyses[role] = specialist_analysis
+                results[role] = specialist_analysis
+                logger.info(f"[{datetime.now().isoformat()}] {role} specialist analysis completed")
                 
                 # Delay between specialist analyses
                 time.sleep(5)
+            
+            # Step 3: Head Coach aggregation
+            logger.info(f"[{datetime.now().isoformat()}] Running Head Coach aggregation...")
+            prompt_head_coach = generate_head_coach_aggregation_prompt(specialist_analyses)
+            response_coach = self.client.models.generate_content(
+                model=self.model,
+                contents=[prompt_head_coach],
+                config=self.default_config
+            )
+            results["head_coach"] = response_coach.text
+            logger.info(f"[{datetime.now().isoformat()}] Head Coach aggregation completed")
                 
             return results
             
