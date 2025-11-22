@@ -209,3 +209,4 @@ node_modules/
 media/
 .env
 backend.pid
+jobs.json
