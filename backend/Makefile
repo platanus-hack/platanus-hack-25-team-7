@@ -1,4 +1,4 @@
-.PHONY: run-backend stop-backend test-upload test-split ngrok help
+.PHONY: run-backend stop-backend test-upload test-split ngrok help setup
 
 # Variables
 VENV = ./venv/bin
@@ -9,11 +9,18 @@ PID_FILE = backend.pid
 
 help:
 	@echo "Available commands:"
+	@echo "  make setup         - Create venv and install dependencies"
 	@echo "  make run-backend   - Run FastAPI backend in background with reload"
 	@echo "  make stop-backend  - Stop the background backend process"
 	@echo "  make test-upload   - Test /upload endpoint with sample video"
 	@echo "  make test-split    - Test /split endpoint (requires JOB_ID)"
 	@echo "  make ngrok         - Start ngrok tunnel on port 8000"
+
+setup:
+	@echo "Creating virtual environment..."
+	python3 -m venv venv
+	@echo "Installing dependencies..."
+	$(VENV)/pip install -r requirements.txt
 
 run-backend:
 	@echo "Starting backend in background with reload..."
