@@ -41,10 +41,17 @@ export default function CameraRecorder({ onExit }) {
   }
 
   return (
-    <div>
+    <div className="page-container">
       <h2>Camera Recording</h2>
 
-      <video ref={videoRef} className="w-full rounded border" autoPlay muted />
+      <video
+        ref={videoRef}
+        className="w-full rounded border mt-4 pointer-events-none select-none opacity-80"
+        controls={false}
+        disablePictureInPicture
+        controlsList="nodownload noplaybackrate nofullscreen noremoteplayback"
+        muted
+        />
 
       {!recording && <button onClick={startRecording}>Start</button>}
       {recording && <button onClick={stopRecording}>Stop</button>}

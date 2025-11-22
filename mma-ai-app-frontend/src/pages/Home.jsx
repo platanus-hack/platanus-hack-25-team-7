@@ -7,7 +7,7 @@ export default function Home() {
   const [mode, setMode] = useState(null);
 
   return (
-    <div>
+    <div className="page-container">
       <h1>MMA AI Round Analyzer</h1>
 
       {!mode && (

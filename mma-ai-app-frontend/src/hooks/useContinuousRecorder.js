@@ -29,7 +29,7 @@ export default function useContinuousRecorder({ onChunk, onStopAll }) {
       }
     };
 
-    mediaRecorderRef.current.start(30000); // chunk every 30 seconds
+    mediaRecorderRef.current.start(1000); // chunk every 30 seconds
     setRecording(true);
   }
 
