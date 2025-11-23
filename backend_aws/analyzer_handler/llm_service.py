@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class LLMService:
     def __init__(self):
+        print('Initializing LLMService ......')
         self.api_key = os.getenv("GEMINI_API_KEY")
         if not self.api_key:
             logger.warning("GEMINI_API_KEY not found in environment variables")

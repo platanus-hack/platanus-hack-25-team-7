@@ -240,3 +240,4 @@ backend.pid
 env.json
 .aws-sam/
 last_upload.json
+.playwright-mcp
