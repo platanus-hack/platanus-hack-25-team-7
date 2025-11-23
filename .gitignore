@@ -246,3 +246,4 @@ env.json
 .aws-sam/
 last_upload.json
 .playwright-mcp
+backend/media
