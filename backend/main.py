@@ -1,9 +1,14 @@
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+# print(os.environ)
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uuid
-import os
 import shutil
 from services.video_service import video_service, JOBS, save_jobs
+from services.chat_service import call_agent as chat_agent
 from models.schemas import UploadResponse, SplitProgress, AnalysisProgress
 
 app = FastAPI()
@@ -15,6 +20,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the Video Analysis API"}
 
 @app.post("/upload", response_model=UploadResponse)
 async def upload_video(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
@@ -61,6 +70,11 @@ async def get_analysis_progress(job_id: str):
     
     job = JOBS[job_id]
     return AnalysisProgress(**job)
+
+@app.get("/agent/")
+async def call_agent(question: str):
+    response = chat_agent(question)
+    return {"response": response}
 
 if __name__ == "__main__":
     import uvicorn

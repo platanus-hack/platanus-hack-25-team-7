@@ -77,6 +77,37 @@ test-analysis:
 		echo ""; \
 	fi
 
+test-agent-list:
+	@echo "Testing /agent with list specialists..."
+	@curl -G "http://localhost:8000/agent/" --data-urlencode "question=List all available specialists"
+	@echo ""
+
+test-agent-consult:
+	@echo "Testing /agent with consult specialist..."
+	@curl -G "http://localhost:8000/agent/" --data-urlencode "question=Consult the general_analyst specialist about my stance. Video context: The fighter has a wide stance."
+	@echo ""
+
+test-agent-create:
+	@echo "Testing /agent with create prompt..."
+	@curl -G "http://localhost:8000/agent/" --data-urlencode "question=Create a prompt for analyzing basketball free throws."
+	@echo ""
+
+test-agent-create-specialist:
+	@echo "Testing /agent with create specialist prompt..."
+	@curl -G "http://localhost:8000/agent/" --data-urlencode "question=Create a specialist prompt for a 'Muay Thai Clinch' expert."
+	@echo ""
+
+test-agent-save-specialist:
+	@echo "Testing /agent with save specialist prompt..."
+	@curl -G "http://localhost:8000/agent/" --data-urlencode "question=Save a new specialist prompt named 'test_specialist' with content 'Analyze the video for testing purposes.'"
+	@echo ""
+
+test-agent-all: test-agent-list test-agent-consult test-agent-create test-agent-create-specialist test-agent-save-specialist
+
+test-docker-agent:
+	@echo "Running agent tests against Docker container (assuming port 8000 is mapped)..."
+	@$(MAKE) test-agent-all
+
 ngrok:
 	@echo "Starting ngrok..."
 	@ngrok http 8000
