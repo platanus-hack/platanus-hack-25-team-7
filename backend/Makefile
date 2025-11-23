@@ -125,6 +125,10 @@ set_credentials:
 	aws configure set region $(AWS_REGION)
 	cat ~/.aws/credentials
 
+get_bucket_name:
+	@echo "list all S3 bucket name ..."
+	aws s3api list-buckets --query "Buckets[].Name" --output text
+
 build:
 	sam build
 
