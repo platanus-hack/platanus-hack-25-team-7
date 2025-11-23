@@ -74,7 +74,7 @@ def update_split_progress(job_id: str, total_chunks=None, completed_chunks=None,
         if split_pct is not None:
             updates.append("#sp = :sp")
             expression_attribute_names["#sp"] = "split_pct"
-            expression_attribute_values[":sp"] = split_pct # Decimal(str(split_pct)) might be needed if float issues arise
+            expression_attribute_values[":sp"] = Decimal(str(split_pct))
             
         if split_status is not None:
             updates.append("#ss = :ss")
@@ -118,7 +118,7 @@ def update_analysis_progress(job_id: str, chunk_result: dict):
             
         total_chunks = job.get("total_chunks", 1) # Avoid division by zero
         analyzed_chunks = job.get("analyzed_chunks", 0) + 1
-        analysis_pct = (analyzed_chunks / total_chunks) * 100
+        analysis_pct = Decimal(str((analyzed_chunks / total_chunks) * 100))
         
         analysis_status = "processing"
         if analyzed_chunks >= total_chunks:
@@ -133,7 +133,7 @@ def update_analysis_progress(job_id: str, chunk_result: dict):
         }
         expression_attribute_values = {
             ":ac": analyzed_chunks,
-            ":ap": str(analysis_pct), # Store as string or Decimal to avoid float errors
+            ":ap": analysis_pct,
             ":as": analysis_status,
             ":cr": [chunk_result]
         }
