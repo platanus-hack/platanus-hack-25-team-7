@@ -45,6 +45,7 @@ export async function uploadFullVideo(file) {
   const fileKey = `uploads/${Date.now()}_${file.name}`;
   const fixedFile = file instanceof File ? file : new File([file], file.name, { type: file.type });
   const bucket = "pvhack-media-012468946780-us-east-1";
+  const s3UploadUrl = `https://${bucket}.s3.amazonaws.com/${fileKey}`;
 
   // === 3. Subir directo a S3 ===
   const uploadParams = {
@@ -59,20 +60,25 @@ export async function uploadFullVideo(file) {
   await s3.send(new PutObjectCommand(uploadParams));
 
   console.log("Upload completed.");
-
+  
+  
   // === 4. Avisar a tu API ===
-  const s3Path = `https://${bucket}.s3.amazonaws.com/${fileKey}`;
-
+  const s3_key = `${fileKey}`;
+  
+  
   const response = await fetch(`${API}/upload`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      fileKey,
-      s3Path,
+      s3_key,
     })
   });
-  console.log("API Response:", response);
-  return response.json();
+  const data = await response.json();
+  localStorage.setItem("uploaded_video_url", s3UploadUrl);
+  localStorage.setItem("uploaded_job_id", data.job_id);
+  
+  console.log("API Response:", data);
+  return data;
 }
 
 
@@ -121,7 +127,7 @@ export async function pollAnalysisProgress(jobId, onProgress) {
     }
 
     // si el análisis terminó
-    if (data.analysis_status !== "processing") {
+    if (data.analysis_status === "completed") {
       return data;
     }
 
