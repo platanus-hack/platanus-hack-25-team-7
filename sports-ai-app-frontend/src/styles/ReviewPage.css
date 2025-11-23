@@ -20,7 +20,8 @@
   position: relative;
   overflow-y: auto;
   height: 100%;
-  padding-right: 5px; /* Space for scrollbar */
+  padding-right: 5px;
+  contain: layout;
 }
 
 .video-player {
@@ -49,14 +50,15 @@
   background: linear-gradient(135deg, #2575FC 0%, #6A11CB 100%);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   border: 2px solid transparent;
   position: relative;
+  will-change: transform;
 }
 
 .timeline-segment:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(37, 117, 252, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 117, 252, 0.5);
   border-color: rgba(255, 255, 255, 0.3);
 }
 
@@ -87,22 +89,34 @@
 }
 
 .timeline-tooltip {
-  position: absolute; /* Taken out of flow to prevent layout shifts */
-  top: 100%; /* Position below the column content (which ends with timeline) */
-  left: 0;
-  width: 100%;
-  margin-top: 10px;
-  padding: 12px 16px;
-  background: rgba(0, 0, 0, 0.9);
-  backdrop-filter: blur(10px);
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 600px;
+  padding: 16px 20px;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px);
   color: white;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  border: 2px solid rgba(139, 92, 246, 0.5);
   font-size: 14px;
   line-height: 1.6;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  z-index: 100;
-  pointer-events: none; /* Prevent tooltip from interfering with mouse events */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(139, 92, 246, 0.3);
+  z-index: 1000;
+  pointer-events: none;
+  animation: tooltipFadeIn 0.2s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 /* ================= ANALYSIS COLUMN ================= */
