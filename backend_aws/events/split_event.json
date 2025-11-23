@@ -1,0 +1,7 @@
+{
+  "Records": [
+    {
+      "body": "{\"job_id\": \"test-job-id\", \"s3_key\": \"uploads/test_video.mp4\"}"
+    }
+  ]
+}

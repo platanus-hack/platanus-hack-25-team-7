@@ -2,14 +2,194 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   backend_aws
+  SAM Template for PVHack 2025 Backend
 
-  SAM Template for Slack Event Listener Lambda function
-
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 900
-    MemorySize: 8192
+    Timeout: 30
+    MemorySize: 128
     Architectures:
       - x86_64
-  
+    Environment:
+      Variables:
+        BUCKET_NAME: !Ref MediaBucket
+        TABLE_NAME: !Ref JobsTable
+        SPLIT_QUEUE_URL: !Ref SplitQueue
+        ANALYSIS_QUEUE_URL: !Ref AnalysisQueue
+        GEMINI_API_KEY: !Ref GeminiApiKey
+        GEMINI_MODEL: !Ref GeminiModel
+
+Parameters:
+  GeminiApiKey:
+    Type: String
+    Description: API Key for Google Gemini
+  GeminiModel:
+    Type: String
+    Default: gemini-2.5-flash
+    Description: Gemini Model to use
+
+Resources:
+  # --- Storage ---
+  MediaBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub pvhack-media-${AWS::AccountId}-${AWS::Region}
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, PUT, POST, HEAD]
+            AllowedOrigins: ['*']
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldFiles
+            Status: Enabled
+            ExpirationInDays: 7
+
+  JobsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: pvhack-jobs
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+        - AttributeName: split_status
+          AttributeType: S
+        - AttributeName: analysis_status
+          AttributeType: S
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: SplitStatusIndex
+          KeySchema:
+            - AttributeName: split_status
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: AnalysisStatusIndex
+          KeySchema:
+            - AttributeName: analysis_status
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+
+  # --- Queues ---
+  SplitDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: SplitDLQ.fifo
+      FifoQueue: true
+
+  SplitQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: SplitQueue.fifo
+      FifoQueue: true
+      ContentBasedDeduplication: true
+      VisibilityTimeout: 600 # 10 mins for splitting
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt SplitDLQ.Arn
+        maxReceiveCount: 3
+
+  AnalysisDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: AnalysisDLQ.fifo
+      FifoQueue: true
+
+  AnalysisQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: AnalysisQueue.fifo
+      FifoQueue: true
+      ContentBasedDeduplication: true
+      VisibilityTimeout: 900 # 15 mins for analysis
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AnalysisDLQ.Arn
+        maxReceiveCount: 3
+
+  # --- Functions ---
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      MemorySize: 512
+      Timeout: 30
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref MediaBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobsTable
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt SplitQueue.QueueName
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+    Metadata:
+      DockerTag: python3.10-v1
+      DockerContext: .
+      Dockerfile: api_handler/Dockerfile
+
+  SplitterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      MemorySize: 2048
+      Timeout: 600
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref MediaBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobsTable
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt AnalysisQueue.QueueName
+      Events:
+        SplitEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SplitQueue.Arn
+            BatchSize: 1
+    Metadata:
+      DockerTag: python3.10-v1
+      DockerContext: .
+      Dockerfile: splitter_handler/Dockerfile
+
+  AnalyzerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      MemorySize: 2048
+      Timeout: 900
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref MediaBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobsTable
+      Events:
+        AnalysisEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt AnalysisQueue.Arn
+            BatchSize: 1
+    Metadata:
+      DockerTag: python3.10-v1
+      DockerContext: .
+      Dockerfile: analyzer_handler/Dockerfile
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  MediaBucketName:
+    Description: S3 Bucket Name
+    Value: !Ref MediaBucket
+  JobsTableName:
+    Description: DynamoDB Table Name
+    Value: !Ref JobsTable
