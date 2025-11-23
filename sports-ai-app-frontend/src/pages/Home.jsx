@@ -16,7 +16,7 @@ export default function Home() {
 
   return (
     <div className="page-container">
-      <h1 className="gradient-text">MMA AI Round Analyzer</h1>
+      <h1 className="gradient-text">SkillLab</h1>
 
       {!mode && (
         <div>
