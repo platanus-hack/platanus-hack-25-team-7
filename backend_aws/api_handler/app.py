@@ -58,9 +58,13 @@ async def upload_video(s3_key: str = Body(..., embed=True)):
     
     return UploadResponse(job_id=job_id, message="Processing started", status="processing")
 
-@app.get("/agent/")
-async def call_agent(question: str):
-    response = chat_agent(question)
+@app.get("/agent/{job_id}")
+async def call_agent(job_id: str, question: str):
+    job = db_service.get_job(job_id)
+    videos = job.get("chunk_analyses", []) if job else []
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    response = chat_agent(question, videos)
     return {"response": response}
 
 @app.get("/split/{job_id}", response_model=SplitProgress)
