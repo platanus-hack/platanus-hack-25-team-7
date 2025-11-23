@@ -161,9 +161,9 @@ export async function pollAnalysisProgress(jobId, onProgress) {
   return loop();
 }
 
-export async function askAgent(question) {
+export async function askAgent(question, jobId) {
   if (USE_FAKE_API) {
     return `[FAKE AI] Respuesta simulada para: ${question}`;
   }
-  return apiAskAgent(question);
+  return apiAskAgent(question, jobId);
 }

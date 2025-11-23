@@ -29,8 +29,8 @@ export function getSummary() {
     .then(res => res.json());
 }
 
-export async function askAgent(question) {
-  const url = new URL(`${import.meta.env.VITE_API_URL}agent/`);
+export async function askAgent(question, jobId) {
+  const url = new URL(`${import.meta.env.VITE_API_URL}agent/${jobId}`);
   url.searchParams.append("question", question);
   console.log("Asking agent question:", question);
   const result = await fetch(url)

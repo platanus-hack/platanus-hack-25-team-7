@@ -108,7 +108,7 @@ echo ""
 ### ==========================================================
 echo "⬆️ Subiendo frontend al bucket..."
 
-aws s3 sync $BUILD_DIR s3://$BUCKET_NAME --delete --acl public-read
+aws s3 sync $BUILD_DIR s3://$BUCKET_NAME --delete
 
 echo "✔ Archivos sincronizados."
 echo ""

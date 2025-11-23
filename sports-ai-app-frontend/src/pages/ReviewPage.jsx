@@ -135,7 +135,7 @@ export default function ReviewPage() {
     setIsChatLoading(true);
 
     try {
-      const responseText = await askAgent(userMessage.text);
+      const responseText = await askAgent(userMessage.text, jobId);
       
       const aiResponse = {
         sender: "ai",
