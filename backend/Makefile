@@ -16,6 +16,7 @@ help:
 	@echo "  make test-upload   - Test /upload endpoint with sample video"
 	@echo "  make test-split    - Test /split endpoint (requires JOB_ID)"
 	@echo "  make test-analysis - Test /analysis endpoint with LLM results (requires JOB_ID)"
+	@echo "  make test-structured - Test /analysis/{job_id}/structured endpoint (requires JOB_ID)"
 	@echo "  make ngrok         - Start ngrok tunnel on port 8000"
 
 clean:
@@ -54,7 +55,7 @@ stop-backend:
 
 test-upload:
 	@echo "Testing /upload endpoint..."
-	@curl -X POST "http://localhost:8000/upload" -F "file=@media/round_chimaev.mp4"
+	@curl -X POST "http://localhost:8000/upload" -F "file=@media/test_30s.mp4"
 	@echo "\n\nCopy the 'job_id' from the response above and run:"
 	@echo "  make test-split JOB_ID=<job_id>     - Check split progress"
 	@echo "  make test-analysis JOB_ID=<job_id>  - Check analysis progress and results"
@@ -74,6 +75,15 @@ test-analysis:
 	else \
 		echo "Checking analysis status for Job ID: $(JOB_ID)"; \
 		curl "http://localhost:8000/analysis/$(JOB_ID)" | python3 -m json.tool; \
+		echo ""; \
+	fi
+
+test-structured:
+	@if [ -z "$(JOB_ID)" ]; then \
+		echo "Error: JOB_ID is missing. Usage: make test-structured JOB_ID=<your_job_id>"; \
+	else \
+		echo "Checking structured analysis for Job ID: $(JOB_ID)"; \
+		curl "http://localhost:8000/analysis/$(JOB_ID)/structured" | python3 -m json.tool; \
 		echo ""; \
 	fi
 

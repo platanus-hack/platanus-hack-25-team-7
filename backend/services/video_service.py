@@ -130,6 +130,9 @@ class VideoService:
             analyzed_count = 0
             failed_count = 0
             
+            # Prepare structured storage
+            JOBS[job_id].setdefault("structured_segments", [])
+
             for i, (chunk_filename, chunk_path) in enumerate(zip(chunks, chunk_paths)):
                 chunk_analysis = {
                     "chunk_index": i,
@@ -146,7 +149,16 @@ class VideoService:
                     logger.info(f"[{datetime.now().isoformat()}] Analyzing chunk {i+1}/{total_chunks}: {chunk_filename}")
                     
                     # Call LLM service (sequential, includes delays between analyses)
-                    results = llm_service.analyze_chunk(chunk_path)
+                    # Calculate absolute time window for structured summary
+                    start_s = i * window
+                    end_s = min((i + 1) * window, duration)
+
+                    results = llm_service.analyze_chunk(
+                        file_path=chunk_path,
+                        segment_index=i,
+                        start_s=int(start_s),
+                        end_s=int(end_s),
+                    )
                     
                     # Store results
                     chunk_analysis["general_analyst"] = results.get("general_analyst")
@@ -154,6 +166,9 @@ class VideoService:
                     chunk_analysis["grappling"] = results.get("grappling")
                     chunk_analysis["submission"] = results.get("submission")
                     chunk_analysis["status"] = "completed"
+                    # Store structured segment if available
+                    if results.get("segment_summary"):
+                        JOBS[job_id]["structured_segments"].append(results["segment_summary"])
                     analyzed_count += 1
                     
                     logger.info(f"[{datetime.now().isoformat()}] Chunk {i+1}/{total_chunks} analysis completed")
@@ -180,6 +195,41 @@ class VideoService:
             else:
                 JOBS[job_id]["analysis_status"] = "partial"
             
+            # Step 4: TacticalCoachSummary structured aggregation if we have segments
+            try:
+                if JOBS[job_id].get("structured_segments"):
+                    from prompts import generate_tactical_coach_structured_prompt
+                    from models.schemas import TacticalCoachSummary
+                    prompt = generate_tactical_coach_structured_prompt(
+                        segment_summaries=JOBS[job_id]["structured_segments"]
+                    )
+                    coach_response = llm_service.client.models.generate_content(
+                        model=llm_service.model,
+                        contents=[prompt],
+                        config={**llm_service.default_config, "response_mime_type": "application/json", "response_json_schema": TacticalCoachSummary.model_json_schema()},
+                    )
+                    raw_json = coach_response.text.strip()
+                    try:
+                        tactical = TacticalCoachSummary.model_validate_json(raw_json)
+                        JOBS[job_id]["tactical_summary"] = tactical.model_dump()
+                    except Exception as e_json:
+                        # Attempt correction
+                        correction_prompt = prompt + f"\nEl JSON anterior fue inválido ({e_json}). Devuelve SOLO JSON corregido."
+                        coach_response = llm_service.client.models.generate_content(
+                            model=llm_service.model,
+                            contents=[correction_prompt],
+                            config={**llm_service.default_config, "response_mime_type": "application/json", "response_json_schema": TacticalCoachSummary.model_json_schema()},
+                        )
+                        raw_json = coach_response.text.strip()
+                        try:
+                            tactical = TacticalCoachSummary.model_validate_json(raw_json)
+                            JOBS[job_id]["tactical_summary"] = tactical.model_dump()
+                        except Exception:
+                            JOBS[job_id]["tactical_summary_error"] = raw_json[:400]
+                save_jobs()
+            except Exception as e:
+                logger.error(f"Failed TacticalCoachSummary aggregation: {e}")
+
             logger.info(f"[{datetime.now().isoformat()}] Analysis completed for job {job_id}: {analyzed_count} succeeded, {failed_count} failed")
             save_jobs()
             

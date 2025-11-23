@@ -10,6 +10,8 @@ import shutil
 from services.video_service import video_service, JOBS, save_jobs
 from services.chat_service import call_agent as chat_agent
 from models.schemas import UploadResponse, SplitProgress, AnalysisProgress
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -70,6 +72,22 @@ async def get_analysis_progress(job_id: str):
     
     job = JOBS[job_id]
     return AnalysisProgress(**job)
+
+class StructuredAnalysisResponse(BaseModel):
+    job_id: str
+    segments: List[Dict[str, Any]]
+    tactical_summary: Optional[Dict[str, Any]] = None
+    status: str
+
+@app.get("/analysis/{job_id}/structured", response_model=StructuredAnalysisResponse)
+async def get_structured_analysis(job_id: str):
+    if job_id not in JOBS:
+        raise HTTPException(status_code=404, detail="Job not found")
+    job = JOBS[job_id]
+    segments = job.get("structured_segments", [])
+    tactical = job.get("tactical_summary")
+    status = job.get("analysis_status", "pending")
+    return StructuredAnalysisResponse(job_id=job_id, segments=segments, tactical_summary=tactical, status=status)
 
 @app.get("/agent/")
 async def call_agent(question: str):
