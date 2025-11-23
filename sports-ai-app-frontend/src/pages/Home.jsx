@@ -1,29 +1,36 @@
 // src/pages/Home.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import CameraRecorder from "../components/CameraRecorder";
-import VideoUploader from "../components/VideoUploader";
 
 export default function Home() {
   const [mode, setMode] = useState(null);
+  const navigate = useNavigate();
+
+  // 🔥 cuando mode cambia a "upload", navega correctamente
+  useEffect(() => {
+    if (mode === "upload") {
+      navigate("/upload");
+    }
+  }, [mode, navigate]);
 
   return (
     <div className="page-container">
-      <h1>MMA AI Round Analyzer</h1>
+      <h1 className="gradient-text">MMA AI Round Analyzer</h1>
 
       {!mode && (
         <div>
-          <button onClick={() => setMode("camera")}>
-            Start Camera Recording
+          <button className="neon-border-btn" onClick={() => setMode("camera")}>
+            <span className="gradient-text">Start Camera Recording</span>
           </button>
 
-          <button onClick={() => setMode("upload")}>
-            Upload Video File
+          <button className="neon-border-btn" onClick={() => setMode("upload")}>
+            <span className="gradient-text">Upload Video File</span>
           </button>
         </div>
       )}
 
       {mode === "camera" && <CameraRecorder onExit={() => setMode(null)} />}
-      {mode === "upload" && <VideoUploader onExit={() => setMode(null)} />}
     </div>
   );
 }

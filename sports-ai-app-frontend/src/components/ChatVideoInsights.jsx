@@ -1,7 +1,10 @@
 // src/components/ChatVideoInsights.jsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-export default function ChatVideoInsights({ analysis, onExit }) {
+export default function ChatVideoInsights({ analysis }) {
+  const navigate = useNavigate();
+
   const [messages, setMessages] = useState([
     {
       sender: "ai",
@@ -39,7 +42,7 @@ export default function ChatVideoInsights({ analysis, onExit }) {
     <div className="chat-wrapper">
       <div className="chat-card">
 
-        <h2 className="chat-title">Análisis del Video</h2>
+        <h2 className="chat-title gradient-text2">Análisis del Video</h2>
 
         <div className="chat-box">
           {messages.map((m, i) => (
@@ -64,8 +67,12 @@ export default function ChatVideoInsights({ analysis, onExit }) {
           </button>
         </div>
 
-        <button className="neon-btn" onClick={onExit} style={{ marginTop: "20px" }}>
-          Volver
+        <button
+          className="neon-border-btn"
+          onClick={() => navigate("/")}
+          style={{ marginTop: "20px" }}
+        >
+        <span className="gradient-text">Volver</span>
         </button>
 
       </div>
