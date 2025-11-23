@@ -49,28 +49,21 @@ llm_light = init_chat_model(
 #     # gemini_video_llm = ...
 #     pass
 
-
 # -----------------------------------------------------------------------------
 # Specialists exploration
 # -----------------------------------------------------------------------------
 
 @tool
 def get_availables_specialists() -> str:
-    """List all the available specialists for video analysis. The specialists prompts are located in the 'prompts' folder (recursively)."""
-    
+    """List all the available specialists for video analysis."""
     prompts_folder = Path(__file__).parent.parent / "prompts"
     
     if not prompts_folder.exists():
         return "No specialists available. Prompts folder not found."
     
     specialists = []
-    for file_path in prompts_folder.rglob("*.txt"):
-        specialist_name = file_path.stem
-        specialists.append(specialist_name)
-    
-    for file_path in prompts_folder.rglob("*.md"):
-        specialist_name = file_path.stem
-        specialists.append(specialist_name)
+    for file_path in prompts_folder.rglob("*.[tm][xd]*"):
+        specialists.append(file_path.stem)
     
     if not specialists:
         return "No specialist prompts found in the prompts folder."
@@ -80,34 +73,15 @@ def get_availables_specialists() -> str:
 
 @tool
 def explain_specialist_analysis(specialist_name: str, video_context: str) -> str:
-    """Explain the analysis made by the specialist LLM prompt (get prompt saved) based on the video context provided."""
-    prompts_folder = Path(__file__).parent.parent / "prompts"
-    
-    # Search for the specialist prompt file
-    specialist_file = None
-    for ext in ['.txt', '.md']:
-        potential_path = prompts_folder / f"{specialist_name}{ext}"
-        if potential_path.exists():
-            specialist_file = potential_path
-            break
-    
-    # Also search recursively in subfolders
+    """Explain the analysis made by the specialist based on the video context."""
+    specialist_file = _find_specialist_file(specialist_name)
     if not specialist_file:
-        for file_path in prompts_folder.rglob(f"{specialist_name}.*"):
-            if file_path.suffix in ['.txt', '.md']:
-                specialist_file = file_path
-                break
+        return f"Specialist '{specialist_name}' not found."
     
-    if not specialist_file:
-        return f"Specialist '{specialist_name}' not found. Use get_availables_specialists to see available options."
-    
-    # Read the specialist prompt
     with open(specialist_file, 'r', encoding='utf-8') as f:
         specialist_prompt = f.read()
     
-    # Create explanation prompt
     explanation_prompt = f"""Based on this specialist prompt:
-
 {specialist_prompt}
 
 And this video context:
@@ -115,51 +89,28 @@ And this video context:
 
 Explain what kind of analysis this specialist would provide and what insights they would focus on."""
     
-    # Use the LLM to generate explanation
-    response = llm_light.invoke(explanation_prompt, performanceConfig={"latency": "optimized"}, max_tokens=256, temperature=0)
+    response = llm_light.invoke(explanation_prompt, max_tokens=256)
     return response.content
 
 
 @tool
 def consult_specialist(specialist_name: str, question: str, video_context: str) -> str:
-    """Consult the specialist LLM prompt/call (get prompt saved) with the question provided."""
-    prompts_folder = Path(__file__).parent.parent / "prompts"
-    
-    # Search for the specialist prompt file
-    specialist_file = None
-    for ext in ['.txt', '.md']:
-        potential_path = prompts_folder / f"{specialist_name}{ext}"
-        if potential_path.exists():
-            specialist_file = potential_path
-            break
-    
-    # Also search recursively in subfolders
+    """Consult the specialist with the question provided."""
+    specialist_file = _find_specialist_file(specialist_name)
     if not specialist_file:
-        for file_path in prompts_folder.rglob(f"{specialist_name}.*"):
-            if file_path.suffix in ['.txt', '.md']:
-                specialist_file = file_path
-                break
+        return f"Specialist '{specialist_name}' not found."
     
-    if not specialist_file:
-        return f"Specialist '{specialist_name}' not found. Use get_availables_specialists to see available options."
-    
-    # Read the specialist prompt
     with open(specialist_file, 'r', encoding='utf-8') as f:
         specialist_prompt = f.read()
     
-    # Construct the full consultation prompt
     full_prompt = f"""{specialist_prompt}
 
-Video Context:
-{video_context}
-
-Question:
-{question}
+Video Context: {video_context}
+Question: {question}
 
 Provide a detailed analysis based on your expertise."""
     
-    # Invoke the LLM with the specialist's perspective
-    response = llm_light.invoke(full_prompt, performanceConfig={"latency": "optimized"}, max_tokens=256, temperature=0)
+    response = llm_light.invoke(full_prompt, max_tokens=256)
     return response.content
 
 
@@ -169,19 +120,15 @@ Provide a detailed analysis based on your expertise."""
 
 @tool
 def create_prompt_for_other_topic(topic: str, details: str) -> str:
-    """Create a prompt for other topics/sports videos beyond just MMA analysis."""
+    """Create a specialist prompt for analyzing videos of any sport/topic."""
     creation_prompt = f"""Create a specialist prompt for analyzing {topic} videos.
-
-Details about what this specialist should focus on:
-{details}
+Focus areas: {details}
 
 Generate a comprehensive prompt that defines:
 1. The specialist's expertise and role
-2. Key aspects to analyze in the video
-3. Common errors or issues to identify
-4. Recommendations format
-
-Return only the prompt content, ready to be saved."""
+2. Key aspects to analyze
+3. Common errors to identify
+4. Recommendations format"""
     
     response = llm_light.invoke(creation_prompt, max_tokens=512, temperature=0.7)
     return response.content
@@ -189,36 +136,24 @@ Return only the prompt content, ready to be saved."""
 
 @tool
 def create_specialist_prompt(specialist_name: str, question: str, video_context: str = "") -> str:
-    """Create a prompt for a specific specialist based on the provided name, question, and video context. You need to use one random prompt template from the 'prompts' folder as inspiration."""
+    """Create a prompt for a specific specialist using a random existing prompt as template."""
     prompts_folder = Path(__file__).parent.parent / "prompts"
+    template_files = list(prompts_folder.rglob("*.[tm][xd]*"))
     
-    # Get a random existing prompt as template
     template_content = ""
-    template_files = list(prompts_folder.rglob("*.txt")) + list(prompts_folder.rglob("*.md"))
-    
     if template_files:
-        template_file = random.choice(template_files)
-        with open(template_file, 'r', encoding='utf-8') as f:
+        with open(random.choice(template_files), 'r', encoding='utf-8') as f:
             template_content = f.read()
     
     creation_prompt = f"""Create a specialist prompt for: {specialist_name}
 
-Use this existing template as inspiration for structure and format:
----
+Template for inspiration:
 {template_content}
----
 
-The specialist should address this question: {question}
+Question to address: {question}
+{f"Video context: {video_context}" if video_context else ""}
 
-{"Video context: " + video_context if video_context else ""}
-
-Generate a prompt that:
-1. Defines the specialist's expertise
-2. Lists key analysis points
-3. Specifies output format
-4. Includes relevant technical knowledge
-
-Return only the prompt content."""
+Generate a prompt with: expertise definition, analysis points, output format, and technical knowledge."""
     
     response = llm_light.invoke(creation_prompt, max_tokens=512, temperature=0.7)
     return response.content
@@ -226,17 +161,35 @@ Return only the prompt content."""
 
 @tool
 def save_specialist_prompt(specialist_name: str, prompt_content: str) -> str:
-    """Save the specialist prompt content into a file in the 'prompts' folder with the given specialist name."""
+    """Save the specialist prompt to the prompts/templates folder."""
     prompts_folder = Path(__file__).parent.parent / "prompts" / "templates"
     prompts_folder.mkdir(parents=True, exist_ok=True)
     
     specialist_file = prompts_folder / f"{specialist_name}.txt"
-    
     with open(specialist_file, 'w', encoding='utf-8') as f:
         f.write(prompt_content)
     
     return f"Specialist prompt '{specialist_name}' saved successfully."
 
+
+# -----------------------------------------------------------------------------
+# Helper functions
+# -----------------------------------------------------------------------------
+
+def _find_specialist_file(specialist_name: str):
+    """Find specialist prompt file by name."""
+    prompts_folder = Path(__file__).parent.parent / "prompts"
+    
+    for ext in ['.txt', '.md']:
+        potential_path = prompts_folder / f"{specialist_name}{ext}"
+        if potential_path.exists():
+            return potential_path
+    
+    for file_path in prompts_folder.rglob(f"{specialist_name}.*"):
+        if file_path.suffix in ['.txt', '.md']:
+            return file_path
+    
+    return None
 
 # -----------------------------------------------------------------------------
 # Agent setup
