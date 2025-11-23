@@ -34,6 +34,7 @@ export default function ReviewPage() {
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
+  const [isChatMaximized, setIsChatMaximized] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const chatEndRef = useRef(null);
 
@@ -174,13 +175,19 @@ export default function ReviewPage() {
     }
   }
 
-  if (!analysis) return <p>Cargando análisis…</p>;
+  if (!analysis) {
+    return (
+      <div className="review-page-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <h2 className="gradient-text2">Cargando análisis...</h2>
+      </div>
+    );
+  }
 
   return (
     <div 
       className="review-page-container"
       style={{
-        gridTemplateColumns: isChatCollapsed ? "50% 45% 5%" : "40% 35% 25%"
+        gridTemplateColumns: isChatCollapsed ? "1.5fr 1.5fr 60px" : "1.2fr 1fr 0.8fr"
       }}
     >
       
@@ -265,15 +272,30 @@ export default function ReviewPage() {
       </div>
 
       {/* ================= RIGHT COLUMN: CHAT ================= */}
-      <div className={`chat-column ${isChatCollapsed ? 'collapsed' : ''}`}>
+      <div className={`chat-column ${isChatCollapsed ? 'collapsed' : ''} ${isChatMaximized ? 'maximized' : ''}`}>
         <div className="chat-header">
           <h3 className="gradient-text2">💬 Chat</h3>
-          <button 
-            className="collapse-button"
-            onClick={() => setIsChatCollapsed(!isChatCollapsed)}
-          >
-            {isChatCollapsed ? '◀' : '▶'}
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {!isChatCollapsed && (
+              <button 
+                className="collapse-button"
+                onClick={() => setIsChatMaximized(!isChatMaximized)}
+                title={isChatMaximized ? "Restaurar" : "Maximizar"}
+              >
+                {isChatMaximized ? '↙' : '⤢'}
+              </button>
+            )}
+            <button 
+              className="collapse-button"
+              onClick={() => {
+                setIsChatCollapsed(!isChatCollapsed);
+                if (!isChatCollapsed) setIsChatMaximized(false); // Reset maximize when collapsing
+              }}
+              title={isChatCollapsed ? "Expandir" : "Colapsar"}
+            >
+              {isChatCollapsed ? '◀' : '▶'}
+            </button>
+          </div>
         </div>
 
         {!isChatCollapsed && (

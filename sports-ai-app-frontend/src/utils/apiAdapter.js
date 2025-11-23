@@ -88,18 +88,31 @@ export async function pollSplitProgress(jobId, onProgress) {
   }
 
   async function loop() {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/split/${jobId}`);
-    const data = await res.json();
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/split/${jobId}`);
+      if (!res.ok) {
+        console.warn(`pollSplitProgress: Server returned ${res.status}`);
+        // Wait a bit longer on error before retrying
+        await new Promise((r) => setTimeout(r, 2000));
+        return loop();
+      }
+      const data = await res.json();
 
-    if (typeof data.split_pct === "number") {
-      onProgress(Math.floor(data.split_pct));
+      if (typeof data.split_pct === "number") {
+        onProgress(Math.floor(data.split_pct));
+      }
+
+      if (data.split_status === "completed") {
+        return data;
+      }
+    } catch (error) {
+      console.error("pollSplitProgress error:", error);
+      // Wait and retry on network error
+      await new Promise((r) => setTimeout(r, 2000));
+      return loop();
     }
 
-    if (data.split_status === "completed") {
-      return data;
-    }
-
-    await new Promise((r) => setTimeout(r, 350));
+    await new Promise((r) => setTimeout(r, 1000));
     return loop();
   }
 
@@ -117,17 +130,28 @@ export async function getAnalysis(jobId) {
 
 export async function pollAnalysisProgress(jobId, onProgress) {
   async function loop() {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/analysis/${jobId}`);
-    const data = await res.json();
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/analysis/${jobId}`);
+      if (!res.ok) {
+        console.warn(`pollAnalysisProgress: Server returned ${res.status}`);
+        await new Promise((r) => setTimeout(r, 2000));
+        return loop();
+      }
+      const data = await res.json();
 
-    // actualiza progreso si existe un campo analysis_pct
-    if (typeof data.analysis_pct === "number") {
-      onProgress(Math.floor(data.analysis_pct));
-    }
+      // actualiza progreso si existe un campo analysis_pct
+      if (typeof data.analysis_pct === "number") {
+        onProgress(Math.floor(data.analysis_pct));
+      }
 
-    // si el análisis terminó
-    if (data.analysis_status === "completed") {
-      return data;
+      // si el análisis terminó
+      if (data.analysis_status === "completed") {
+        return data;
+      }
+    } catch (error) {
+      console.error("pollAnalysisProgress error:", error);
+      await new Promise((r) => setTimeout(r, 2000));
+      return loop();
     }
 
     await new Promise((r) => setTimeout(r, 1000));
