@@ -23,6 +23,7 @@ class ChunkAnalysis(BaseModel):
     striking: Optional[str] = None
     grappling: Optional[str] = None
     submission: Optional[str] = None
+    head_coach: Optional[str] = None
     error: Optional[str] = None
 
 class AnalysisProgress(BaseModel):
