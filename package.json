@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.937.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
+  }
+}
