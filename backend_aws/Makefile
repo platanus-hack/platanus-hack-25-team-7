@@ -40,6 +40,9 @@ set_credentials:
 	aws configure set region $(AWS_REGION)
 	cat ~/.aws/credentials
 
+get_api_url:
+	@echo "Getting API URL for stack $(STACK_NAME) in region $(REGION)..."
+	@echo "API URL: $(API_URL)"
 
 build:
 	sam build
