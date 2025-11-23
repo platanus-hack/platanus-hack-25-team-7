@@ -30,10 +30,13 @@ export function getSummary() {
 }
 
 export async function askAgent(question) {
-  const url = new URL(`${import.meta.env.VITE_API_URL}/agent/`);
+  const url = new URL(`${import.meta.env.VITE_API_URL}agent/`);
   url.searchParams.append("question", question);
-  
-  return fetch(url)
+  console.log("Asking agent question:", question);
+  const result = await fetch(url)
     .then(res => res.json())
     .then(data => data.response);
+
+  console.log("Agent response:", result);
+  return result;
 }
