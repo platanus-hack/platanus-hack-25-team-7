@@ -1,5 +1,5 @@
 {
     "project-name": "SkillLab", 
     "project-description-spanish": "Herramienta de video-understanding para análisis de habilidades deportivas", 
-    "deploy-url": ""
+    "deploy-url": "http://sports-ai-app-frontend-prod.s3-website-us-east-1.amazonaws.com/"
 }
