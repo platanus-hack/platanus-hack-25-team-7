@@ -1,6 +1,5 @@
-
 import { generateFakeVideoSummary } from "./fakeVideoAnalysis";
-import { uploadChunk, getSummary } from "./api";
+import { uploadChunk, getSummary, askAgent as apiAskAgent } from "./api";
 
 // El backend REAL trabaja chunk por chunk → (FastAPI)
 // La simulación trabaja con todos los blobs → (local)
@@ -27,89 +26,120 @@ export async function processChunk(blob) {
   }
 }
 
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
-export async function uploadFullVideo(file, onProgress) {
-  const useFake = USE_FAKE_API === true;
-  // 🟣 SIMULACIÓN — Fake API activada
-  if (useFake) {
-    return new Promise((resolve) => {
-      let percent = 0;
+export async function uploadFullVideo(file) {
+  const API = import.meta.env.VITE_API_URL;
 
-      const interval = setInterval(() => {
-        percent += 10;     // 10% cada segundo
-        onProgress(percent);
-
-        if (percent >= 100) {
-          clearInterval(interval);
-
-          // pequeña pausa estética antes de devolver el resultado
-          setTimeout(() => {
-            resolve({
-              overallSummary: "Procesado con FAKE API (simulación).",
-              segmentSummaries: [
-                "Segmento simulado A",
-                "Segmento simulado B",
-                "Segmento simulado C",
-              ],
-            });
-          }, 500);
-        }
-      }, 1000); // ← total 10 segundos
-    });
-  }
- const uploadResponse = await new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    const endpoint = `${import.meta.env.VITE_API_URL}/upload`;
-
-    xhr.open("POST", endpoint);
-
-    xhr.onload = () => {
-      try {
-        const data = JSON.parse(xhr.responseText);
-        resolve(data);
-      } catch (err) {
-        reject(err);
-      }
-    };
-
-    xhr.onerror = reject;
-
-    const formData = new FormData();
-    formData.append("file", file);
-    xhr.send(formData);
+  // === 1. Configurar cliente S3 ===
+  const s3 = new S3Client({
+    region: "us-east-1",
+    credentials: {
+      accessKeyId: import.meta.env.VITE_AWS_ACCESS_KEY,
+      secretAccessKey: import.meta.env.VITE_AWS_SECRET_KEY,
+    }
   });
 
-  const jobId = uploadResponse.job_id;
-  console.log("📥 Upload completo. jobId =", jobId);
+  // === 2. Generar ruta del archivo ===
+  const fileKey = `uploads/${Date.now()}_${file.name}`;
+  const fixedFile = file instanceof File ? file : new File([file], file.name, { type: file.type });
+  const bucket = "pvhack-media-012468946780-us-east-1";
+  const s3UploadUrl = `https://${bucket}.s3.amazonaws.com/${fileKey}`;
 
-  async function pollSplitStatus() {
-    const endpoint = `${import.meta.env.VITE_API_URL}/split/${jobId}`;
+  // === 3. Subir directo a S3 ===
+  const uploadParams = {
+    Bucket: bucket,
+    Key: fileKey,
+    Body: await fixedFile.arrayBuffer(),
+    ContentType: file.type,
+  };
 
-    const res = await fetch(endpoint);
+  console.log("Uploading to S3:", uploadParams);
+
+  await s3.send(new PutObjectCommand(uploadParams));
+
+  console.log("Upload completed.");
+  
+  
+  // === 4. Avisar a tu API ===
+  const s3_key = `${fileKey}`;
+  
+  
+  const response = await fetch(`${API}/upload`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      s3_key,
+    })
+  });
+  const data = await response.json();
+  localStorage.setItem("uploaded_video_url", s3UploadUrl);
+  localStorage.setItem("uploaded_job_id", data.job_id);
+  
+  console.log("API Response:", data);
+  return data;
+}
+
+
+export async function pollSplitProgress(jobId, onProgress) {
+  if (typeof onProgress !== "function") {
+    console.error("pollSplitProgress: onProgress NO es función");
+    onProgress = () => {};
+  }
+
+  async function loop() {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/split/${jobId}`);
     const data = await res.json();
 
-    // 🔥 actualizar barra con split_pct
     if (typeof data.split_pct === "number") {
       onProgress(Math.floor(data.split_pct));
     }
-    
+
     if (data.split_status === "completed") {
-      console.log("✅ Split completado");
       return data;
     }
 
-    // esperar un poco antes del siguiente fetch
     await new Promise((r) => setTimeout(r, 350));
-
-    return pollSplitStatus();
+    return loop();
   }
 
-  // Esperar hasta que split diga "done"
-  const final = await pollSplitStatus();
+  return loop();
+}
 
-  // Preparamos un objeto compatible con tu ChatVideoInsights
-  return {
-    overallSummary: `Procesamiento completado (${final.completed_chunks}/${final.total_chunks} chunks).`,
-    segmentSummaries: final.chunks,
-  };
+
+export async function getAnalysis(jobId) {
+  console.log("Fetching analysis for jobId:", jobId, "from URL:", `${import.meta.env.VITE_API_URL}/analysis/${jobId}`);
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/analysis/${jobId}`);
+  if (!res.ok) throw new Error("Error fetching analysis");
+  return res.json();
+}
+
+
+export async function pollAnalysisProgress(jobId, onProgress) {
+  async function loop() {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/analysis/${jobId}`);
+    const data = await res.json();
+
+    // actualiza progreso si existe un campo analysis_pct
+    if (typeof data.analysis_pct === "number") {
+      onProgress(Math.floor(data.analysis_pct));
+    }
+
+    // si el análisis terminó
+    if (data.analysis_status === "completed") {
+      return data;
+    }
+
+    await new Promise((r) => setTimeout(r, 1000));
+    return loop();
+  }
+
+  return loop();
+}
+
+export async function askAgent(question) {
+  if (USE_FAKE_API) {
+    return `[FAKE AI] Respuesta simulada para: ${question}`;
+  }
+  return apiAskAgent(question);
 }

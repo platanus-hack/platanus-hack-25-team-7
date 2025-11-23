@@ -1,0 +1,7 @@
+{
+  "Records": [
+    {
+      "body": "{\"job_id\": \"test-job-id\", \"chunk_index\": 0, \"chunk_s3_key\": \"splits/test-job-id/chunk_0.mp4\", \"chunk_filename\": \"chunk_0.mp4\"}"
+    }
+  ]
+}

@@ -13,6 +13,19 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --neon-orange:   #FFA552; /* naranja neón suave */
+  --neon-amber:    #FFB14E; /* amber cálido */
+  --neon-peach:    #FFBC70; /* peach neón claro */
+  --neon-mandarin: #FF8F3B; /* mandarina brillante */
+  --neon-soft:     #FFD18F; /* glow más pastel */
+}
+
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -31,9 +44,6 @@ body {
   justify-content: flex-start;
   min-width: 320px;
   min-height: 100vh;
-  background-image: url('./assets/background.jpg');
-  background-size: cover;
-  background-position: center;
 }
 
 h1 {
@@ -48,12 +58,11 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
   transition: border-color 0.25s;
 }
 button:hover {
-  border-color: #646cff;
+  border-color: var(--neon-mandarin);
 }
 button:focus,
 button:focus-visible {
@@ -152,7 +161,7 @@ body {
   width: calc(100vw - 80px);
   padding: 40px;
   box-sizing: border-box;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: transparent !important;
   margin: 40px;
   overflow: visible;
 }
@@ -160,7 +169,7 @@ body {
 .page-container > .page-container{
   height: auto;
   width: auto;
-  background-color: rgba(0, 0, 0, 0.0);
+  background-color: transparent !important;
 }
 
 /* === TITULOS === */
@@ -235,7 +244,7 @@ input[type="file"] {
 .send-btn {
   margin-top: 10px;
   padding: 10px 18px;
-  background: #ff00ff;
+  background: #8B5CF6;
   border: none;
   border-radius: 8px;
   color: black;
@@ -300,12 +309,12 @@ video.locked {
 
 .ai-msg {
   background: rgba(255, 255, 255, 0.12);
-  border-left: 3px solid #ff00ff;
+  border-left: 3px solid #8B5CF6;
 }
 
 .user-msg {
   align-self: flex-end;
-  background: #ff00ff;
+  background: #8B5CF6;
   color: black;
   border-radius: 12px 12px 0px 12px;
 }
@@ -329,14 +338,14 @@ video.locked {
 
 .chat-input:focus {
   outline: none;
-  border-color: #ff00ff;
+  border-color: #8B5CF6;
   box-shadow: 0 0 10px #ff00ff66;
 }
 
 /* === BOTÓN ENVIAR === */
 .chat-send-btn {
   padding: 14px 20px;
-  background: #ff00ff;
+  background: #8B5CF6;
   color: black;
   border-radius: 10px;
   font-weight: 700;
@@ -345,5 +354,244 @@ video.locked {
 }
 
 .chat-send-btn:hover {
-  background: #ff33ff;
+  background: #6A11CB;
+}
+
+body {
+  background-color: #F5F5F5 !important;   /* fondo blanco */
+  color: #000 !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;        /* centra texto */
+}
+
+/* Canvas encima del fondo, pero debajo del contenido */
+#particle-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 10;  /* queda detrás del contenido */
+  pointer-events: none;  /* no bloquea clics */
+}
+
+.page-container,
+.chat-wrapper,
+.chat-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.page-container,
+.chat-card,
+.chat-message {
+  padding: 30px !important;
+}
+
+.msg{
+  padding: 10px;
+}
+
+button{
+  padding: 10px;
+  margin: 20px;
+}
+
+/* === BORDE NEÓN NARANJA === */
+.neon-border {
+  border: 2px solid var(--neon-orange);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow:
+    0 0 8px var(--neon-orange),
+    0 0 16px var(--neon-peach),
+    0 0 32px var(--neon-amber);
+  transition: 0.25s ease;
+}
+
+.neon-border:hover {
+  box-shadow:
+    0 0 12px var(--neon-mandarin),
+    0 0 24px var(--neon-orange),
+    0 0 40px var(--neon-peach);
+  transform: translateY(-2px);
+}
+
+.neon-border-soft {
+  border: 2px solid var(--neon-peach);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow:
+    0 0 6px var(--neon-soft),
+    0 0 14px var(--neon-amber);
+}
+
+
+.neon-border-strong {
+  border: 3px solid var(--neon-mandarin);
+  box-shadow:
+    0 0 12px var(--neon-orange),
+    0 0 26px var(--neon-mandarin),
+    0 0 55px var(--neon-peach);
+}
+/* === BOTÓN BASE === */
+/* === BOTÓN BASE === */
+.neon-border-btn {
+  position: relative;
+  padding: 14px 28px;
+  background: #111;
+  color: white;
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  overflow: hidden;
+
+  /* El texto vive en este z-index */
+  z-index: 3;
+}
+
+/* === BORDE ANIMADO === */
+.neon-border-btn::before {
+  content: "";
+  position: absolute;
+  top: -150px;
+  left: -150px;
+  right: -150px;
+  bottom: -150px;
+  border-radius: inherit;
+
+  background: conic-gradient(
+    #6A11CB,
+    #2575FC,
+    #6A11CB
+  );
+
+  animation: sweepBorder 6s linear infinite;
+  transition: animation-duration 0.3s ease;
+
+  /* Debajo del texto */
+  z-index: -1;
+}
+
+/* === INTERIOR NEGRO QUE TAPA EL CENTRO === */
+.neon-border-btn::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  background: #EAE5F8;
+  border-radius: inherit;
+
+  /* Entre el borde y el texto */
+  z-index: 1;
+}
+
+.neon-border-btn span {
+  position: relative;
+  z-index: 3;
+}
+
+/* === ACELERA AL HOVER === */
+.neon-border-btn:hover::before {
+  animation-duration: 1s;
+}
+
+/* === ANIMACIÓN === */
+@keyframes sweepBorder {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+
+.gradient-text {
+  background: linear-gradient(90deg, #6A11CB, #2575FC);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+
+/* --- SAME BASE STYLE FOR BOTH BUTTON & LABEL --- */
+.neon-border-btn,
+.neon-border-btn[type="button"],
+label.neon-border-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 12px 26px;
+  border-radius: 16px;
+  background: #EAE5F8;
+  color: #111;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+
+  position: relative;
+  border: none;
+  overflow: hidden;
+
+  white-space: nowrap;
+}
+
+
+.gradient-text2 {
+  background: linear-gradient(90deg, #8B5CF6, #7DD3FC);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+
+/* === AMPLIAR LA TARJETA === */
+.chat-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 50px;
+}
+
+.chat-card {
+  width: 100%;
+  max-width: 1100px;     /* 🔥 más ancho que 900px */
+  padding: 40px;         /* más respiración */
+  border-radius: 20px;
+  background: rgba(50, 50, 50, 0.9);
+  box-shadow: 0 0 40px rgba(255, 0, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+/* === QUE TODO INTERNO TENGA MISMO ANCHO === */
+.chat-box,
+.chat-input-row,
+.chat-input,
+.chat-send-btn,
+.neon-btn {
+  width: 100%;
+}
+
+/* La fila input + enviar en columnas */
+.chat-input-row {
+  display: grid;
+  grid-template-columns: 4fr 1fr;
+  gap: 15px;
+}
+
+/* Ajustar input */
+.chat-input {
+  height: 48px;
+}
+
+/* Botón “Volver” centrado y ancho 100% */
+.neon-btn {
+  align-self: center;
+  max-width: 300px;  /* opcional */
 }

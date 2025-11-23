@@ -1,0 +1,2 @@
+boto3
+imageio-ffmpeg==0.6.0
