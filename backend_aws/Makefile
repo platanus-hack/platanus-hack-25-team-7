@@ -49,7 +49,8 @@ build:
 
 deploy:
 	sam build
-	sam deploy --stack-name $(STACK_NAME) --resolve-s3 --capabilities CAPABILITY_IAM --region $(REGION) --resolve-image-repos
+	sam deploy --stack-name $(STACK_NAME) --resolve-s3 --capabilities CAPABILITY_IAM --region $(REGION) --resolve-image-repos --parameter-overrides $$(cat env.json | python3 -c "import sys, json; params = json.load(sys.stdin)['Parameters']; print(' '.join([f'ParameterKey={k},ParameterValue={v}' for k, v in params.items()]))")
+	python3 upload_prompts.py $(BUCKET_NAME)
 
 validate:
 	sam validate --template template.yaml
@@ -58,7 +59,7 @@ upload-test-video:
 	@echo "Getting Bucket Name..."
 	@echo "Bucket: $(BUCKET_NAME)"
 	@echo "Uploading test video..."
-	aws s3 cp ../backend/media/round_chimaev.mp4 s3://$(BUCKET_NAME)/uploads/test_video.mp4 --region $(REGION)
+	aws s3 cp ../backend/media/test_30s.mp4 s3://$(BUCKET_NAME)/uploads/test_video.mp4 --region $(REGION)
 	@echo "Video uploaded to s3://$(BUCKET_NAME)/uploads/test_video.mp4"
 
 test-upload:

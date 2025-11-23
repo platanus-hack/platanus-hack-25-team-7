@@ -1,17 +1,48 @@
 import os
-from pathlib import Path
+import boto3
+import logging
+from botocore.exceptions import ClientError
 from typing import Dict
 
-def _get_templates_dir() -> Path:
-    """Obtiene la ruta del directorio de templates"""
-    return Path(__file__).parent / "templates"
+logger = logging.getLogger(__name__)
+
+# Cache for templates to avoid repeated S3 calls
+_TEMPLATE_CACHE = {}
+
+def _get_bucket_name() -> str:
+    """Get the bucket name from environment variables"""
+    bucket = os.getenv("BUCKET_NAME")
+    if not bucket:
+        raise ValueError("BUCKET_NAME environment variable is not set")
+    return bucket
 
 def load_template(template_name: str) -> str:
-    """Carga un template desde archivo"""
-    template_path = _get_templates_dir() / f"{template_name}.txt"
-    if not template_path.exists():
-        raise FileNotFoundError(f"Template not found: {template_path}")
-    return template_path.read_text(encoding="utf-8")
+    """
+    Load a template from S3.
+    
+    Args:
+        template_name: Name of the template (without extension)
+        
+    Returns:
+        The content of the template
+    """
+    if template_name in _TEMPLATE_CACHE:
+        return _TEMPLATE_CACHE[template_name]
+
+    bucket_name = _get_bucket_name()
+    key = f"prompts/{template_name}.txt"
+    
+    s3 = boto3.client("s3")
+    
+    try:
+        logger.info(f"Loading template from s3://{bucket_name}/{key}")
+        response = s3.get_object(Bucket=bucket_name, Key=key)
+        content = response["Body"].read().decode("utf-8")
+        _TEMPLATE_CACHE[template_name] = content
+        return content
+    except ClientError as e:
+        logger.error(f"Error loading template {template_name} from s3://{bucket_name}/{key}: {e}")
+        raise FileNotFoundError(f"Template {template_name} not found in S3") from e
 
 def generate_general_analyst_prompt() -> str:
     """Genera el prompt del analista general"""

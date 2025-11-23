@@ -14,6 +14,7 @@ else:
 BUCKET_NAME = os.getenv('BUCKET_NAME')
 
 def lambda_handler(event, context):
+    print(f"Received event: {json.dumps(event)}")
     for record in event['Records']:
         try:
             body = json.loads(record['body'])
