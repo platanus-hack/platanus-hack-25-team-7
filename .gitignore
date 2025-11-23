@@ -206,7 +206,12 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 node_modules/
-media/
+# Media: ignorar subcarpetas específicas pero permitir logo/
+media/splits/
+media/uploads/
+media/imgs/
+# Permitir logos (debe ir después de las reglas de ignorar)
+!media/logo/
 .env
 backend.pid
 jobs.json
