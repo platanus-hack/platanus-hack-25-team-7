@@ -51,12 +51,15 @@ export default function ParticleBackground() {
 
 
     let particles = [];
+    let animationFrameId;
 
-    window.addEventListener("mousemove", (e) => {
-      for (let i = 0; i < 6; i++) {
+    const handleMouseMove = (e) => {
+      for (let i = 0; i < 3; i++) { // Reduced from 6 to 3 for performance
         particles.push(new Particle(e.clientX, e.clientY));
       }
-    });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
 
     function animate() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -68,11 +71,30 @@ export default function ParticleBackground() {
         p.draw();
       });
 
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
     }
 
     animate();
+
+    return () => {
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", handleMouseMove);
+      cancelAnimationFrame(animationFrameId);
+    };
   }, []);
 
-  return <canvas id="particle-canvas"></canvas>;
+  return (
+    <canvas
+      id="particle-canvas"
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        zIndex: -1,
+        pointerEvents: "none",
+      }}
+    ></canvas>
+  );
 }
