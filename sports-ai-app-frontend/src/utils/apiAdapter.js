@@ -1,6 +1,5 @@
-
 import { generateFakeVideoSummary } from "./fakeVideoAnalysis";
-import { uploadChunk, getSummary } from "./api";
+import { uploadChunk, getSummary, askAgent as apiAskAgent } from "./api";
 
 // El backend REAL trabaja chunk por chunk → (FastAPI)
 // La simulación trabaja con todos los blobs → (local)
@@ -136,4 +135,11 @@ export async function pollAnalysisProgress(jobId, onProgress) {
   }
 
   return loop();
+}
+
+export async function askAgent(question) {
+  if (USE_FAKE_API) {
+    return `[FAKE AI] Respuesta simulada para: ${question}`;
+  }
+  return apiAskAgent(question);
 }

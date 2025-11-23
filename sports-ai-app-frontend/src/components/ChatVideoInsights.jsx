@@ -1,6 +1,7 @@
 // src/components/ChatVideoInsights.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { askAgent } from "../utils/apiAdapter";
 
 export default function ChatVideoInsights({ analysis }) {
   const navigate = useNavigate();
@@ -8,34 +9,34 @@ export default function ChatVideoInsights({ analysis }) {
   const [messages, setMessages] = useState([
     {
       sender: "ai",
-      text: analysis.overallSummary,
+      text: analysis.overallSummary || analysis.overall_summary || "Hola, soy tu asistente de video. ¿En qué puedo ayudarte?",
     },
   ]);
 
   const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  function handleSend() {
+  async function handleSend() {
     if (!input.trim()) return;
 
     const userMessage = { sender: "user", text: input };
     setMessages((prev) => [...prev, userMessage]);
-
-    // Simulación de respuesta basada en análisis
-    const aiResponse = {
-      sender: "ai",
-      text: generateFakeResponse(input, analysis),
-    };
-
-    setMessages((prev) => [...prev, aiResponse]);
     setInput("");
-  }
+    setIsLoading(true);
 
-  function generateFakeResponse(question, analysis) {
-    return (
-      `Preguntaste: **${question}**.\n\n` +
-      `Aquí tienes un desglose basado en el video:\n` +
-      (analysis.segmentSummaries?.join("\n") || "Sin datos de segmentos.")
-    );
+    try {
+      const responseText = await askAgent(userMessage.text);
+      const aiResponse = {
+        sender: "ai",
+        text: responseText,
+      };
+      setMessages((prev) => [...prev, aiResponse]);
+    } catch (error) {
+      console.error("Error asking agent:", error);
+      setMessages((prev) => [...prev, { sender: "ai", text: "Error al conectar con el asistente." }]);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -53,6 +54,7 @@ export default function ChatVideoInsights({ analysis }) {
               {m.text}
             </div>
           ))}
+          {isLoading && <div className="msg ai-msg">...</div>}
         </div>
 
         <div className="chat-input-row">
@@ -61,9 +63,11 @@ export default function ChatVideoInsights({ analysis }) {
             placeholder="Escribe tu pregunta sobre el video..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            disabled={isLoading}
+            onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSend()}
           />
-          <button className="chat-send-btn" onClick={handleSend}>
-            Enviar
+          <button className="chat-send-btn" onClick={handleSend} disabled={isLoading}>
+            {isLoading ? "..." : "Enviar"}
           </button>
         </div>
 

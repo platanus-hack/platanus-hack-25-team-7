@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { useParams } from "react-router-dom";
-import { getAnalysis } from "../utils/apiAdapter";
+import { getAnalysis, askAgent } from "../utils/apiAdapter";
 import remarkGfm from "remark-gfm";
 import ReactMarkdown from "react-markdown";
 import "../styles/ReviewPage.css";
@@ -34,6 +34,7 @@ export default function ReviewPage() {
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const chatEndRef = useRef(null);
 
   function parseS3Url(url) {
@@ -124,27 +125,33 @@ export default function ReviewPage() {
   }
 
   /* ================= CHAT FUNCTIONS ================= */
-  function handleSendMessage() {
+  async function handleSendMessage() {
     if (!chatInput.trim()) return;
 
     const userMessage = { sender: "user", text: chatInput };
     setMessages(prev => [...prev, userMessage]);
-
-    // Generate AI response based on context
-    const context = selectedSegmentIndex !== null 
-      ? `Segmento ${selectedSegmentIndex}: ${analysis.chunk_analyses[selectedSegmentIndex].general_analyst}`
-      : analysis.overall_summary;
-
-    const aiResponse = {
-      sender: "ai",
-      text: `Preguntaste: **${chatInput}**\n\nBasado en el análisis: ${context.substring(0, 200)}...`
-    };
-
-    setTimeout(() => {
-      setMessages(prev => [...prev, aiResponse]);
-    }, 500);
-
     setChatInput("");
+    setIsChatLoading(true);
+
+    try {
+      const responseText = await askAgent(userMessage.text);
+      
+      const aiResponse = {
+        sender: "ai",
+        text: responseText
+      };
+      
+      setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error("Error asking agent:", error);
+      const errorResponse = {
+        sender: "ai",
+        text: "Lo siento, hubo un error al procesar tu pregunta. Por favor intenta de nuevo."
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
+      setIsChatLoading(false);
+    }
   }
 
   /* ================= GET CURRENT CONTENT ================= */
@@ -282,6 +289,11 @@ export default function ReviewPage() {
                   </ReactMarkdown>
                 </div>
               ))}
+              {isChatLoading && (
+                <div className="chat-message ai-message">
+                  <em>Pensando...</em>
+                </div>
+              )}
               <div ref={chatEndRef} />
             </div>
 
@@ -299,10 +311,11 @@ export default function ReviewPage() {
                 placeholder="Pregunta sobre el video..."
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                onKeyPress={(e) => e.key === 'Enter' && !isChatLoading && handleSendMessage()}
+                disabled={isChatLoading}
               />
-              <button className="chat-send-button" onClick={handleSendMessage}>
-                Enviar
+              <button className="chat-send-button" onClick={handleSendMessage} disabled={isChatLoading}>
+                {isChatLoading ? '...' : 'Enviar'}
               </button>
             </div>
           </>
