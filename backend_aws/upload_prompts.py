@@ -17,10 +17,10 @@ def upload_prompts(bucket_name):
 
     s3 = boto3.client('s3')
     
-    print(f"Uploading prompts to s3://{bucket_name}/prompts/ ...")
+    print(f"Uploading prompts to s3://{bucket_name}/prompts/templates/ ...")
     
     for file_path in templates_dir.glob("*.txt"):
-        key = f"prompts/{file_path.name}"
+        key = f"prompts/templates/{file_path.name}"
         try:
             print(f"Uploading {file_path.name} -> {key}")
             s3.upload_file(str(file_path), bucket_name, key)

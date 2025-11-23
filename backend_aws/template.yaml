@@ -118,7 +118,7 @@ Resources:
     Properties:
       PackageType: Image
       MemorySize: 512
-      Timeout: 30
+      Timeout: 60
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref MediaBucket
@@ -126,6 +126,12 @@ Resources:
             TableName: !Ref JobsTable
         - SQSSendMessagePolicy:
             QueueName: !GetAtt SplitQueue.QueueName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:InvokeModelWithResponseStream
+              Resource: "*"
       Events:
         ApiEvent:
           Type: HttpApi

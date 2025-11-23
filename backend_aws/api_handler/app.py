@@ -6,6 +6,7 @@ import os
 import boto3
 from schemas import UploadResponse, SplitProgress, AnalysisProgress
 from shared import db_service
+from services.chat_service import call_agent as chat_agent
 
 app = FastAPI()
 
@@ -56,6 +57,11 @@ async def upload_video(s3_key: str = Body(..., embed=True)):
         raise HTTPException(status_code=500, detail=f"Queue error: {str(e)}")
     
     return UploadResponse(job_id=job_id, message="Processing started", status="processing")
+
+@app.get("/agent/")
+async def call_agent(question: str):
+    response = chat_agent(question)
+    return {"response": response}
 
 @app.get("/split/{job_id}", response_model=SplitProgress)
 async def get_split_progress(job_id: str):
